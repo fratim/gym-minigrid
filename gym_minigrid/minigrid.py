@@ -304,7 +304,7 @@ class Ball(WorldObj):
         fill_coords(img, point_in_circle(0.5, 0.5, 0.31), COLORS[self.color])
 
 class Box(WorldObj):
-    def __init__(self, color, contains=None):
+    def __init__(self, color='blue', contains=None):
         super(Box, self).__init__('box', color)
         self.contains = contains
 
@@ -391,6 +391,9 @@ class Grid:
             length = self.height - y
         for j in range(0, length):
             self.set(x, y + j, obj_type())
+
+    def free_cell(self, x, y):
+        self.set(x, y, None)
 
     def wall_rect(self, x, y, w, h):
         self.horz_wall(x, y, w)
@@ -1214,7 +1217,18 @@ class MiniGridEnv(gym.Env):
         if self.agent_view_size == "all":
             grid = self.grid.copy()
             vis_mask = None
-            grid.set(*self.agent_pos, Key())
+
+            if self.agent_dir == 0:
+                grid.set(*self.agent_pos, Key(color='red'))
+            elif self.agent_dir == 1:
+                grid.set(*self.agent_pos, Key(color='green'))
+            elif self.agent_dir == 2:
+                grid.set(*self.agent_pos, Key(color='blue'))
+            elif self.agent_dir == 3:
+                grid.set(*self.agent_pos, Key(color='purple'))
+            else:
+                print(self.agent_dir)
+                raise NotImplementedError
         else:
             grid, vis_mask = self.gen_obs_grid()
 
