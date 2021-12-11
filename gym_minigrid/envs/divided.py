@@ -23,16 +23,16 @@ class DividedEnv(MiniGridEnv):
         self.put_obj(Goal(), width - 2, height - 2)
 
         # # Create a vertical splitting wall
-        # splitIdx = int(width/2)
-        # self.grid.vert_wall(splitIdx, 0)
+        splitIdx = int(width/2)
+        self.grid.vert_wall(splitIdx, 0)
 
         # Place the agent at a random position and orientation
         # on the left side of the splitting wall
         self.place_agent(size=(3, height))
 
         # # Place free cell in middle
-        # doorIdx = int(width / 2)
-        # self.grid.free_cell(doorIdx, doorIdx)
+        doorIdx = int(width / 2)
+        self.grid.free_cell(doorIdx, doorIdx)
 
 
         # Place a door in the wall

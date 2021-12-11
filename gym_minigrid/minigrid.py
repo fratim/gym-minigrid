@@ -718,15 +718,20 @@ class MiniGridEnv(gym.Env):
         # Initialize the state
         self.reset()
 
-    def reset(self):
+    def reset(self, agent_pos=None, agent_dir=None):
         # Current position and direction of the agent
-        self.agent_pos = None
-        self.agent_dir = None
+        self.agent_pos = agent_pos
+        self.agent_dir = agent_dir
 
         # Generate a new random grid at the start of each episode
         # To keep the same grid for each episode, call env.seed() with
         # the same seed before calling env.reset()
         self._gen_grid(self.width, self.height)
+
+        ## replace agent here
+        if agent_pos is not None and agent_dir is not None:
+            self.agent_pos = agent_pos
+            self.agent_dir = agent_dir
 
         # These fields should be defined by _gen_grid
         assert self.agent_pos is not None
@@ -907,7 +912,7 @@ class MiniGridEnv(gym.Env):
         top=None,
         size=None,
         reject_fn=None,
-        max_tries=math.inf
+        max_tries=1000
     ):
         """
         Place an object at an empty position in the grid
@@ -976,7 +981,7 @@ class MiniGridEnv(gym.Env):
         top=None,
         size=None,
         rand_dir=True,
-        max_tries=math.inf
+        max_tries=1000
     ):
         """
         Set the agent's starting point at an empty position in the grid
