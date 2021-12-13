@@ -304,12 +304,20 @@ class Ball(WorldObj):
         fill_coords(img, point_in_circle(0.5, 0.5, 0.31), COLORS[self.color])
 
 class Box(WorldObj):
-    def __init__(self, color='blue', contains=None):
+    def __init__(self, color='red', contains=None, strength=2):
         super(Box, self).__init__('box', color)
         self.contains = contains
+        self.strength = strength
 
-    def can_pickup(self):
-        return True
+    def can_overlap(self):
+        """The agent can only walk over this cell when the door is open"""
+
+        assert self.strength >= 0
+
+        if self.strength == 0:
+            return True
+        else:
+            return False
 
     def render(self, img):
         c = COLORS[self.color]
@@ -322,9 +330,20 @@ class Box(WorldObj):
         fill_coords(img, point_in_rect(0.16, 0.84, 0.47, 0.53), c)
 
     def toggle(self, env, pos):
-        # Replace the box by its contents
-        env.grid.set(*pos, self.contains)
+        # decrease strength of box
+        if self.strength > 0:
+            self.strength -= 1
+
+        if self.strength == 0:
+            self.color = "green"
+
         return True
+
+    def encode(self):
+        """Encode the a description of this object as a 3-tuple of integers"""
+
+        # State, 0: open, 1: closed, 2: locked
+        return (OBJECT_TO_IDX[self.type], COLOR_TO_IDX[self.color], self.strength)
 
 class Grid:
     """
@@ -718,7 +737,7 @@ class MiniGridEnv(gym.Env):
         # Initialize the state
         self.reset()
 
-    def reset(self, agent_pos=None, agent_dir=None, goal_pos=None):
+    def reset(self, agent_pos=None, agent_dir=None, box_strength=4, goal_pos=None):
         # Current position and direction of the agent
         self.agent_pos = agent_pos
         self.agent_dir = agent_dir
@@ -726,7 +745,7 @@ class MiniGridEnv(gym.Env):
         # Generate a new random grid at the start of each episode
         # To keep the same grid for each episode, call env.seed() with
         # the same seed before calling env.reset()
-        self._gen_grid(self.width, self.height, goal_pos)
+        self._gen_grid(self.width, self.height, box_strength, goal_pos)
 
         ## replace agent here
         if agent_pos is not None and agent_dir is not None:

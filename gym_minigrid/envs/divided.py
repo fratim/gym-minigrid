@@ -6,9 +6,10 @@ class DividedEnv(MiniGridEnv):
     Environment with a divider with tunnel in the middle
     """
 
-    def __init__(self, size, random_goals=True):
+    def __init__(self, size, random_goals=True, add_box=True):
 
         self.random_goals = random_goals
+        self.add_box = add_box
 
         super().__init__(
             grid_size=size,
@@ -16,16 +17,23 @@ class DividedEnv(MiniGridEnv):
         )
 
 
-    def _gen_grid(self, width, height, goal_pos_inp=None):
+    def _gen_grid(self, width, height, box_strength, goal_pos_inp=None):
         # Create an empty grid
         self.grid = Grid(width, height)
 
         # Generate the surrounding walls
         self.grid.wall_rect(0, 0, width, height)
 
-        # # Create a vertical splitting wall
-        splitIdx = int(width / 2)
-        self.grid.vert_wall(splitIdx, 0)
+        # Create a vertical splitting wall
+        self.grid.vert_wall(int(width / 2), 0)
+
+        if self.add_box:
+            # Add box in middle
+            self.put_obj(Box(strength=box_strength), int(width / 2), int(height / 2))
+        else:
+            # # Place free cell in middle
+            doorIdx = int(width / 2)
+            self.grid.free_cell(doorIdx, doorIdx)
 
         # Place a goal in the bottom-right corner
         if goal_pos_inp is None:
@@ -41,10 +49,6 @@ class DividedEnv(MiniGridEnv):
 
         # Place the agent at a random position and orientation
         self.place_agent() # place agent at random starting position
-
-        # # Place free cell in middle
-        doorIdx = int(width / 2)
-        self.grid.free_cell(doorIdx, doorIdx)
 
 
         # Place a door in the wall
