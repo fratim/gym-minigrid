@@ -6,10 +6,10 @@ class DividedEnv(MiniGridEnv):
     Environment with a divider with tunnel in the middle
     """
 
-    def __init__(self, size, random_goals=True, add_box=True):
+    def __init__(self, size, random_goals, max_box_strength):
 
         self.random_goals = random_goals
-        self.add_box = add_box
+        self.max_box_strength = max_box_strength
 
         super().__init__(
             grid_size=size,
@@ -17,65 +17,109 @@ class DividedEnv(MiniGridEnv):
         )
 
 
-    def _gen_grid(self, width, height, box_strength, goal_pos_inp=None):
-        # Create an empty grid
-        self.grid = Grid(width, height)
+    def place_box(self, configuration):
+        if self.max_box_strength is not None:
+            if configuration and configuration.box_strength is not None:
+                box_strength = configuration
+            else:
+                box_strength = np.random.randint(0, self.max_box_strength)
 
-        # Generate the surrounding walls
-        self.grid.wall_rect(0, 0, width, height)
+            self.put_obj(Box(strength=box_strength), int(self.width / 2), int(self.height / 2))
 
-        # Create a vertical splitting wall
-        self.grid.vert_wall(int(width / 2), 0)
-
-        if self.add_box:
-            # Add box in middle
-            self.put_obj(Box(strength=box_strength), int(width / 2), int(height / 2))
         else:
             # # Place free cell in middle
-            doorIdx = int(width / 2)
+            doorIdx = int(self.width / 2)
             self.grid.free_cell(doorIdx, doorIdx)
+            box_strength = -1
 
-        # Place a goal in the bottom-right corner
-        if goal_pos_inp is None:
-            if self.random_goals:
-                # goal_pos = self.place_obj(None)
-                pb_goals = [(1, 1), (1, 3), (3, 1), (3, 3)] # TODO undo this hard coded BS
-                goal_pos = pb_goals[np.random.randint(0, len(pb_goals))]
-                self.put_obj(Goal(), *goal_pos)
-            else:
-                self.put_obj(Goal(), width - 2, height - 2)
+        return box_strength
+
+    def set_up_goal(self, configuration):
+        # Place a goal goal
+        if configuration and configuration.goal_pos is not None:
+            goal_pos = configuration.goal_pos
         else:
-            self.put_obj(Goal(), *goal_pos_inp)
+            if self.random_goals:
+                goal_pos = self.get_possible_location()
+            else:
+                goal_pos = (self.width - 2, self.height - 2)
 
+        self.put_obj(Goal(), *goal_pos)
+
+        return goal_pos
+
+    def set_up_agent(self, goal_pos, configuration):
         # Place the agent at a random position and orientation
-        self.place_agent() # place agent at random starting position
+        if configuration and configuration.agent_state is not None:
+            assert configuration.agent_dir is not None
+            self.place_agent(configuration.agent_pos, configuration.agent_dir)
+        else:
+            goal_x = goal_pos[0]
+            box_width = math.floor((self.width-2)/2)
+            box = (box_width, self.height-2)
+            if goal_x > (self.width/2):
+                top = (1, 1)
+            else:
+                top = (math.ceil(self.width / 2), 1)
+            self.place_agent(top, box)  # place agent at random starting position on the other side of the grid
+
+    def set_up_walls(self):
+        # Generate the surrounding walls
+        self.grid.wall_rect(0, 0, self.width, self.height)
+
+        # Create a vertical splitting wall
+        self.grid.vert_wall(int(self.width / 2), 0)
+
+    def _gen_grid(self, configuration):
+        # Create an empty grid
+        self.grid = Grid(self.width, self.height)
+
+        # set up walls
+        self.set_up_walls()
+
+        # place box or leave middle cell empty
+        box_strength = self.place_box(configuration)
+
+        # determine and fix goal position
+        goal_pos = self.set_up_goal(configuration)
+
+        # determine and fix agent position
+        self.set_up_agent(goal_pos, configuration)
+
+        # create mission statement
+        self.mission = f"get to the goal by destroying the box of strength {box_strength}"
 
 
-        # Place a door in the wall
-        #doorIdx = int(width/2)
-        #self.put_obj(Door('yellow', is_locked=False), splitIdx, doorIdx)
-
-        self.mission = "get to the goal"
-
+## environment without box and with goal in bottom right corner
 class DividedEnv5x5(DividedEnv):
     def __init__(self):
-        super().__init__(size=5)
+        super().__init__(size=5, random_goals=False, max_box_strength=None)
 
-class DividedEnv6x6(DividedEnv):
+## environment without box and with random goals
+class DividedEnv5x5xRandGoals(DividedEnv):
     def __init__(self):
-        super().__init__(size=6)
+        super().__init__(size=5, random_goals=True, max_box_strength=None)
 
-class DividedEnv7x7(DividedEnv):
+## environment with box of strength 1 and with goal in bottom right corner
+class DividedEnv5x5xBox1(DividedEnv):
     def __init__(self):
-        super().__init__(size=7)
+        super().__init__(size=5, random_goals=False, max_box_strength=1)
 
-class DividedEnv8x8(DividedEnv):
+## environment with box of strength 4 and with goal in bottom right corner
+class DividedEnv5x5xBox4(DividedEnv):
     def __init__(self):
-        super().__init__(size=8)
+        super().__init__(size=5, random_goals=False, max_box_strength=4)
 
-class DividedEnv16x16(DividedEnv):
+## environment with box of strength 1 and with random goals
+class DividedEnv5x5xRandGoalsxBox1(DividedEnv):
     def __init__(self):
-        super().__init__(size=16)
+        super().__init__(size=5, random_goals=True, max_box_strength=1)
+
+## environment with box of strength 4 and with random goals
+class DividedEnv5x5xRandGoalsxBox4(DividedEnv):
+    def __init__(self):
+        super().__init__(size=5, random_goals=True, max_box_strength=4)
+
 
 register(
     id='MiniGrid-Divided-5x5-v0',
@@ -83,21 +127,26 @@ register(
 )
 
 register(
-    id='MiniGrid-Divided-6x6-v0',
-    entry_point='gym_minigrid.envs:DividedEnv6x6'
+    id='MiniGrid-Divided-5x5-RandGoals-v0',
+    entry_point='gym_minigrid.envs:DividedEnv5x5xRandGoals'
 )
 
 register(
-    id='MiniGrid-Divided-7x7-v0',
-    entry_point='gym_minigrid.envs:DividedEnv7x7'
+    id='MiniGrid-Divided-5x5-Box1-v0',
+    entry_point='gym_minigrid.envs:DividedEnv5x5xBox1'
 )
 
 register(
-    id='MiniGrid-Divided-8x8-v0',
-    entry_point='gym_minigrid.envs:DividedEnv8x8'
+    id='MiniGrid-Divided-5x5-Box4-v0',
+    entry_point='gym_minigrid.envs:DividedEnv5x5xBox4'
 )
 
 register(
-    id='MiniGrid-Divided-16x16-v0',
-    entry_point='gym_minigrid.envs:DividedEnv16x16'
+    id='MiniGrid-Divided-5x5-RandGoals-Box1-v0',
+    entry_point='gym_minigrid.envs:DividedEnv5x5xRandGoalsxBox1'
+)
+
+register(
+    id='MiniGrid-Divided-5x5-RandGoals-Box4-v0',
+    entry_point='gym_minigrid.envs:DividedEnv5x5xRandGoalsxBox4'
 )

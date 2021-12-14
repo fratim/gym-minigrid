@@ -309,6 +309,9 @@ class Box(WorldObj):
         self.contains = contains
         self.strength = strength
 
+        if self.strength == 0:
+            self.color = "green"
+
     def can_overlap(self):
         """The agent can only walk over this cell when the door is open"""
 
@@ -680,6 +683,9 @@ class MiniGridEnv(gym.Env):
             width = grid_size
             height = grid_size
 
+        # initialize window variable
+        self.window = None
+
         # Action enumeration for this environment
         self.actions = MiniGridEnv.Actions
 
@@ -737,20 +743,12 @@ class MiniGridEnv(gym.Env):
         # Initialize the state
         self.reset()
 
-    def reset(self, agent_pos=None, agent_dir=None, box_strength=4, goal_pos=None):
-        # Current position and direction of the agent
-        self.agent_pos = agent_pos
-        self.agent_dir = agent_dir
+    def reset(self, configuration=None):
 
         # Generate a new random grid at the start of each episode
         # To keep the same grid for each episode, call env.seed() with
         # the same seed before calling env.reset()
-        self._gen_grid(self.width, self.height, box_strength, goal_pos)
-
-        ## replace agent here
-        if agent_pos is not None and agent_dir is not None:
-            self.agent_pos = agent_pos
-            self.agent_dir = agent_dir
+        self._gen_grid(configuration)
 
         # These fields should be defined by _gen_grid
         assert self.agent_pos is not None
@@ -926,20 +924,23 @@ class MiniGridEnv(gym.Env):
             self.np_random.randint(yLow, yHigh)
         )
 
-    def place_obj(self,
-        obj,
-        top=None,
-        size=None,
-        reject_fn=None,
-        max_tries=1000
-    ):
-        """
-        Place an object at an empty position in the grid
+    def position_is_possible(self, pos, reject_fn=None):
+        # Don't place the object on top of another object
+        if self.grid.get(*pos) != None:
+            return False
 
-        :param top: top-left position of the rectangle where to place
-        :param size: size of the rectangle where to place
-        :param reject_fn: function to filter out potential positions
-        """
+        # Don't place the object where the agent is
+        elif np.array_equal(pos, self.agent_pos):
+            return False
+
+        # Check if there is a filtering criterion
+        elif reject_fn and reject_fn(self, pos):
+            return False
+
+        else:
+            return True
+
+    def get_possible_location(self, top=None, size=None, reject_fn=None, max_tries=1000):
 
         if top is None:
             top = (0, 0)
@@ -964,19 +965,26 @@ class MiniGridEnv(gym.Env):
                 self._rand_int(top[1], min(top[1] + size[1], self.grid.height))
             ))
 
-            # Don't place the object on top of another object
-            if self.grid.get(*pos) != None:
-                continue
+            if self.position_is_possible(pos, reject_fn):
+                break
 
-            # Don't place the object where the agent is
-            if np.array_equal(pos, self.agent_pos):
-                continue
+        return pos
 
-            # Check if there is a filtering criterion
-            if reject_fn and reject_fn(self, pos):
-                continue
+    def place_obj(self,
+        obj,
+        top=None,
+        size=None,
+        reject_fn=None
+    ):
+        """
+        Place an object at an empty position in the grid
 
-            break
+        :param top: top-left position of the rectangle where to place
+        :param size: size of the rectangle where to place
+        :param reject_fn: function to filter out potential positions
+        """
+
+        pos = self.get_possible_location(top, size, reject_fn)
 
         self.grid.set(*pos, obj)
 
@@ -1000,18 +1008,34 @@ class MiniGridEnv(gym.Env):
         top=None,
         size=None,
         rand_dir=True,
-        max_tries=1000
+        reject_fn=None
     ):
         """
         Set the agent's starting point at an empty position in the grid
         """
 
         self.agent_pos = None
-        pos = self.place_obj(None, top, size, max_tries=max_tries)
+        pos = self.place_obj(None, top, size, reject_fn)
         self.agent_pos = pos
 
         if rand_dir:
             self.agent_dir = self._rand_int(0, 4)
+
+        return pos
+
+    def place_agent_det(
+        self,
+        pos,
+        dir,
+    ):
+        """
+        Set the agent's starting point at aa determined psoition in the grid
+        """
+
+        assert self.position_is_possible(pos)
+
+        self.agent_pos = pos
+        self.agent_dir = dir
 
         return pos
 
@@ -1351,6 +1375,11 @@ class MiniGridEnv(gym.Env):
             self.window.show_img(img)
 
         return img
+
+    def render_blank_image(self):
+        if self.window:
+            white_image = np.ones((self.grid.height * TILE_PIXELS, self.grid.width * TILE_PIXELS, 3))
+            self.window.show_img(white_image)
 
     def close(self):
         if self.window:
