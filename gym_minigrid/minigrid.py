@@ -309,8 +309,11 @@ class Box(WorldObj):
         self.contains = contains
         self.strength = strength
 
-        if self.strength == 0:
+        if strength == 0:
             self.color = "green"
+
+        if self.color == "green" and self.strength != 0:
+            print("stopped")
 
     def can_overlap(self):
         """The agent can only walk over this cell when the door is open"""
@@ -339,6 +342,9 @@ class Box(WorldObj):
 
         if self.strength == 0:
             self.color = "green"
+
+        if self.color == "green" and self.strength != 0:
+            print("stopped")
 
         return True
 
@@ -657,15 +663,15 @@ class MiniGridEnv(gym.Env):
         right = 1
         forward = 2
 
-        # Pick up an object
-        pickup = 3
-        # Drop an object
-        drop = 4
         # Toggle/activate an object
-        toggle = 5
-
+        toggle = 3
         # Done completing task
-        done = 6
+        done = 4
+
+        # # Pick up an object
+        # pickup = 3
+        # # Drop an object
+        # drop = 4
 
     def __init__(
         self,
@@ -1192,19 +1198,19 @@ class MiniGridEnv(gym.Env):
                 done = True
 
         # Pick up an object
-        elif action == self.actions.pickup:
-            if fwd_cell and fwd_cell.can_pickup():
-                if self.carrying is None:
-                    self.carrying = fwd_cell
-                    self.carrying.cur_pos = np.array([-1, -1])
-                    self.grid.set(*fwd_pos, None)
+        # elif action == self.actions.pickup:
+        #     if fwd_cell and fwd_cell.can_pickup():
+        #         if self.carrying is None:
+        #             self.carrying = fwd_cell
+        #             self.carrying.cur_pos = np.array([-1, -1])
+        #             self.grid.set(*fwd_pos, None)
 
         # Drop an object
-        elif action == self.actions.drop:
-            if not fwd_cell and self.carrying:
-                self.grid.set(*fwd_pos, self.carrying)
-                self.carrying.cur_pos = fwd_pos
-                self.carrying = None
+        # elif action == self.actions.drop:
+        #     if not fwd_cell and self.carrying:
+        #         self.grid.set(*fwd_pos, self.carrying)
+        #         self.carrying.cur_pos = fwd_pos
+        #         self.carrying = None
 
         # Toggle/activate an object
         elif action == self.actions.toggle:

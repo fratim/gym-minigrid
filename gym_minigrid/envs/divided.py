@@ -22,7 +22,7 @@ class DividedEnv(MiniGridEnv):
             if configuration and configuration.box_strength is not None:
                 box_strength = configuration
             else:
-                box_strength = np.random.randint(0, self.max_box_strength)
+                box_strength = np.random.randint(0, self.max_box_strength+1)
 
             self.put_obj(Box(strength=box_strength), int(self.width / 2), int(self.height / 2))
 
@@ -54,14 +54,16 @@ class DividedEnv(MiniGridEnv):
             assert configuration.agent_dir is not None
             self.place_agent(configuration.agent_pos, configuration.agent_dir)
         else:
-            goal_x = goal_pos[0]
-            box_width = math.floor((self.width-2)/2)
-            box = (box_width, self.height-2)
-            if goal_x > (self.width/2):
-                top = (1, 1)
-            else:
-                top = (math.ceil(self.width / 2), 1)
-            self.place_agent(top, box)  # place agent at random starting position on the other side of the grid
+            #goal_x = goal_pos[0]
+            #box_width = math.floor((self.width-2)/2)
+            #box = (box_width, self.height-2)
+            #if goal_x > (self.width/2):
+            #    top = (1, 1)
+            #else:
+            #    top = (math.ceil(self.width / 2), 1)
+            #self.place_agent(top, box)  # place agent at random starting position on the other side of the grid
+
+            self.place_agent()
 
     def set_up_walls(self):
         # Generate the surrounding walls
