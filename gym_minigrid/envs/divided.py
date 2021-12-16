@@ -20,7 +20,7 @@ class DividedEnv(MiniGridEnv):
     def place_box(self, configuration):
         if self.max_box_strength is not None:
             if configuration and configuration.box_strength is not None:
-                box_strength = configuration
+                box_strength = configuration.box_strength
             else:
                 box_strength = np.random.randint(0, self.max_box_strength+1)
 
@@ -38,6 +38,7 @@ class DividedEnv(MiniGridEnv):
         # Place a goal goal
         if configuration and configuration.goal_pos is not None:
             goal_pos = configuration.goal_pos
+            assert self.position_is_possible(goal_pos)
         else:
             if self.random_goals:
                 goal_pos = self.get_possible_location()
@@ -50,9 +51,9 @@ class DividedEnv(MiniGridEnv):
 
     def set_up_agent(self, goal_pos, configuration):
         # Place the agent at a random position and orientation
-        if configuration and configuration.agent_state is not None:
+        if configuration and configuration.agent_pos is not None:
             assert configuration.agent_dir is not None
-            self.place_agent(configuration.agent_pos, configuration.agent_dir)
+            self.place_agent_det(configuration.agent_pos, configuration.agent_dir)
         else:
             #goal_x = goal_pos[0]
             #box_width = math.floor((self.width-2)/2)

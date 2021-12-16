@@ -751,6 +751,10 @@ class MiniGridEnv(gym.Env):
 
     def reset(self, configuration=None):
 
+        # Current position and direction of the agent
+        self.agent_pos = None
+        self.agent_dir = None
+
         # Generate a new random grid at the start of each episode
         # To keep the same grid for each episode, call env.seed() with
         # the same seed before calling env.reset()
